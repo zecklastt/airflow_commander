@@ -2,6 +2,8 @@ import os
 import requests
 import json
 from datetime import datetime
+from server.config.MongoDBConfig import get_connection
+import pytz
 
 
 class Configuration:
@@ -27,6 +29,20 @@ class Configuration:
 class CommanderScraper:
     def __init__(self):
         self.headers = Configuration.HEADERS
+        self.collection = get_connection()['commanders']
+
+    def _save_data(self, data):
+        commander = {
+            'name': data[0],
+            'url': data[1],
+            'created_at': datetime.now(pytz.timezone('America/Sao_Paulo')).strftime('%Y-%m-%d %H:%M'),
+        }
+
+        try:
+            result = self.collection.insert_one(commander)
+            print(f"Commander {commander['name']} salvo com o ID {result.inserted_id}")
+        except Exception as e:
+            raise Exception(f'Erro ao salvar o commander: {str(e)}')
 
     def commander_data(self):
         response = requests.get(
@@ -36,25 +52,6 @@ class CommanderScraper:
         name = daily['name']
         url = daily['url']
         return name, url
-
-    def _create_file_name(self):
-        data_inicio = datetime.today().strftime('%d-%m-%Y')
-        file_name = f'Commander_of_day-{data_inicio}.txt'
-        return file_name
-
-    def _save_data(self, data):
-        file_path = Configuration.COMMANDER_PATH
-        if not os.path.exists(file_path):
-            os.makedirs(file_path)
-
-        file_name = self._create_file_name()
-        file_path = os.path.join(file_path, file_name)
-
-        try:
-            with open(file_path, 'x') as commander_file:
-                commander_file.write(str(data))
-        except FileExistsError:
-            raise FileExistsError(f'Arquivo de hoje já existe na pasta {file_path}.')
 
     def save_commander(self):
         try:

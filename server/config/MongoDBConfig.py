@@ -1,26 +1,22 @@
-import os
-from dotenv import load_dotenv
-from pymongo import MongoClient
+import pymongo
 
-class MongoDBConfig:
-    __instance = None
 
-    @staticmethod
-    def get_instance():
-        if MongoDBConfig.__instance is None:
-            MongoDBConfig()
-        return MongoDBConfig.__instance
+def get_connection():
+    try:
+        mongo = MongoConnection('commanders')
+        collection = mongo.get_collection('commander_day')
+        return collection
+    except Exception:
+        raise Exception
 
-    @staticmethod
-    def get_client():
-        return MongoDBConfig.get_instance().client
 
-    def __init__(self):
-        if MongoDBConfig.__instance is not None:
-            raise Exception("This class is a singleton!")
-        else:
-            MongoDBConfig.__instance = self
+class MongoConnection:
+    def __init__(self, db_name):
+        self.client = pymongo.MongoClient('mongodb://localhost:27017')
+        self.db = self.client[db_name]
 
-        load_dotenv()
-        self.uri = os.environ.get('MONGO_CONNECTION_STRING')
-        self.client = MongoClient(self.uri)
+    def get_collection(self, collection_name):
+        try:
+            return self.db[collection_name]
+        except Exception:
+            raise Exception
